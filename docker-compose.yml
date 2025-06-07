@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  fastredis:
+    image: redis:latest
+    container_name: fastredis
+    restart: always
+    networks:
+      - fastlink
+    ports:
+      - "6379:6379"  # 可选，暴露端口用于主机调试
+
+  fastsql:
+    # image: maplexx/fastsql:v1.
+    image: maplexx/fastsql:v1.2
+    container_name: fastsql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: leafdetective
+      MYSQL_USER: leafdetective
+      MYSQL_PASSWORD: leafdetective
+    ports:
+      - "3306:3306"
+    networks:
+      - fastlink
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  fast:
+    # image: maplexx/fastapiback:v1.1
+    image: maplexx/fastapiback:v1.4
+    container_name: fast
+    restart: always
+    depends_on:
+      - fastsql
+      - fastredis
+    ports:
+      - "9099:9099"
+    networks:
+      - fastlink
+    environment:
+      DB_HOST: fastsql
+      DB_PORT: 3306
+      DB_USER: leafdetective
+      DB_PASSWORD: leafdetective
+      REDIS_HOST: fastredis
+      REDIS_PORT: 6379
+
+  fastvue:
+    image: maplexx/fastvue:v1.3
+    container_name: fastvue
+    restart: always
+    depends_on:
+      - fast
+    ports:
+      - "80:80"
+    networks:
+      - fastlink
+
+volumes:
+  mysql-data:
+
+networks:
+  fastlink:
+    driver: bridge
